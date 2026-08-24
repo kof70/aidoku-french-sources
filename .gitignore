@@ -14,4 +14,5 @@ src/rust/*/target
 src/rust/node_modules
 
 wasm-ld
-.env
+.env.docker-cargo-cache/
+.docker-rustup-cache/
