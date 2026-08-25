@@ -1,0 +1,24 @@
+[
+	{
+		"type": "group",
+		"title": "Lecture",
+		"footer": "« Automatique » choisit le sens de lecture d'après les genres de l'œuvre.",
+		"items": [
+			{
+				"type": "select",
+				"key": "defaultViewer",
+				"title": "Lecteur par défaut",
+				"values": ["auto", "rtl", "ltr", "vertical", "webtoon"],
+				"titles": [
+					"Automatique",
+					"Droite à gauche",
+					"Gauche à droite",
+					"Vertical",
+					"Webtoon"
+				],
+				"default": "auto",
+				"refreshes": ["content"]
+			}
+		]
+	}
+]

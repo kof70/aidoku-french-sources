@@ -1,8 +1,9 @@
 #![no_std]
 use aidoku::{
-	error::Result, prelude::*, std::current_date, std::net::HttpMethod,
-	std::net::Request, std::String, std::StringRef, std::Vec, Chapter, DeepLink, Filter, Listing,
-	Manga, MangaContentRating, MangaPageResult, MangaStatus, MangaViewer, Page,
+	error::Result, prelude::*, std::current_date, std::defaults::defaults_get,
+	std::net::HttpMethod, std::net::Request, std::String, std::StringRef, std::Vec, Chapter,
+	DeepLink, Filter, Listing, Manga, MangaContentRating, MangaPageResult, MangaStatus,
+	MangaViewer, Page,
 };
 use madara_template::helper::{add_user_agent_header, get_image_url};
 use madara_template::template;
@@ -100,22 +101,36 @@ fn get_manga_details(manga_id: String) -> Result<Manga> {
 		MangaStatus::Unknown
 	};
 
+	// "shonen"/"seinen"/etc are demographic tags shared by both manga and
+	// manhwa/manhua, so they say nothing about reading direction on their
+	// own: only check them once no format tag (webtoon/manhwa/...) matched
+	// any genre, and check the format tags across *all* genres first so a
+	// later "Webcomic" tag isn't shadowed by an earlier "Shonen" one.
 	let webtoon_tags = ["manhwa", "manhua", "webtoon", "webcomic", "vertical", "korean", "chinese"];
-	let rtl_tags = ["manga", "japan", "shonen", "seinen", "shojo", "josei"];
+	let rtl_tags = ["manga", "japan"];
+	let categories_lower: Vec<String> = categories.iter().map(|c| c.to_lowercase()).collect();
 	let mut viewer = MangaViewer::Scroll;
-	'outer: for cat in &categories {
-		let cat_lower = cat.to_lowercase();
-		for tag in webtoon_tags {
-			if cat_lower.contains(tag) {
-				viewer = MangaViewer::Scroll;
-				break 'outer;
-			}
-		}
-		for tag in rtl_tags {
-			if cat_lower.contains(tag) {
-				viewer = MangaViewer::Rtl;
-				break 'outer;
-			}
+	if categories_lower
+		.iter()
+		.any(|c| webtoon_tags.iter().any(|tag| c.contains(tag)))
+	{
+		viewer = MangaViewer::Scroll;
+	} else if categories_lower
+		.iter()
+		.any(|c| rtl_tags.iter().any(|tag| c.contains(tag)))
+	{
+		viewer = MangaViewer::Rtl;
+	}
+
+	if let Ok(setting) = defaults_get("defaultViewer") {
+		if let Ok(value) = setting.as_string() {
+			viewer = match value.read().as_str() {
+				"rtl" => MangaViewer::Rtl,
+				"ltr" => MangaViewer::Ltr,
+				"vertical" => MangaViewer::Vertical,
+				"webtoon" => MangaViewer::Scroll,
+				_ => viewer, // "auto" or anything else: keep the genre-based guess
+			};
 		}
 	}
 
